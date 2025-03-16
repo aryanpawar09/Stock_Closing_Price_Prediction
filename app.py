@@ -1,7 +1,7 @@
 import streamlit as st
 import tensorflow as tf
 import numpy as np
-import joblib  # For loading the scaler
+import pickle  # Use pickle instead of joblib
 
 # Load the trained GRU model
 @st.cache_resource
@@ -11,8 +11,9 @@ def load_model():
 
 model = load_model()
 
-# Load the scaler used during training
-scaler = joblib.load("scaler.pkl")  # Make sure scaler.pkl exists
+# Load the scaler using pickle
+with open("scaler.pkl", "rb") as f:
+    scaler = pickle.load(f)
 
 # Streamlit UI
 st.title("📈 Stock Price Prediction using GRU")
