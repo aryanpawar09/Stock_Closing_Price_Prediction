@@ -1,9 +1,9 @@
 import streamlit as st
 import tensorflow as tf
 import numpy as np
-import pandas as pd
+import joblib  # For loading the scaler
 
-# Load the trained model
+# Load the trained GRU model
 @st.cache_resource
 def load_model():
     model = tf.keras.models.load_model("gru_stock_model.keras")
@@ -11,19 +11,42 @@ def load_model():
 
 model = load_model()
 
+# Load the scaler used during training
+scaler = joblib.load("scaler.pkl")  # Make sure scaler.pkl exists
+
 # Streamlit UI
 st.title("📈 Stock Price Prediction using GRU")
 st.write("Enter the stock data to predict the next closing price.")
 
-# Input fields for stock features
-n_features = 2  # Change based on your dataset
-input_data = []
-for i in range(n_features):
-    input_data.append(st.number_input(f"Feature {i+1}", value=0.0))
+# Define the number of input features and time steps
+n_features = 2  # Update this if your model uses a different number of features
+time_steps = 10  # Update this to match the time steps used in training
 
-# Convert input to numpy array and reshape for model
+# Input fields for stock features
+input_data = []
+st.write(f"Enter the last {time_steps} values for each feature:")
+
+for i in range(time_steps):
+    row = []
+    for j in range(n_features):
+        row.append(st.number_input(f"Feature {j+1}, Time Step {i+1}", value=0.0))
+    input_data.append(row)
+
+# Convert input data to a NumPy array
 if st.button("Predict"):
-    input_array = np.array(input_data).reshape(1, 1, n_features)  # Ensure correct shape
-    prediction = model.predict(input_array)
+    input_array = np.array(input_data).reshape(1, time_steps, n_features)  # Shape: (1, time_steps, n_features)
+
+    # Scale the input data using the same scaler from training
+    scaled_input = scaler.transform(input_array.reshape(-1, n_features)).reshape(1, time_steps, n_features)
+
+    # Make prediction
+    prediction = model.predict(scaled_input)
     
+    # Display prediction
     st.success(f"Predicted Closing Price: {prediction[0][0]:.4f}")
+
+    # Debugging: Print input details
+    st.write("Debug Info:")
+    st.write(f"Original Input Shape: {np.array(input_data).shape}")
+    st.write(f"Scaled Input Shape: {scaled_input.shape}")
+    st.write(f"Model Input Shape: {input_array.shape}")
